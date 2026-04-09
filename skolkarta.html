@@ -3,16 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sveriges skolresultat — meritvärde åk 9</title>
+<title>Sveriges skolresultat</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #0f1117; --surface: #181c27;
-    --border: rgba(255,255,255,0.07);
-    --text: #e8e6e0; --muted: #7a7870; --accent: #c8f04a;
+    --bg: #0f1117; --surface: #181c27; --surface2: #1e2333;
+    --border: rgba(255,255,255,0.08);
+    --text: #e8e6e0; --muted: #7a7870; --accent: #f5c842;
   }
   body {
     background: var(--bg); color: var(--text);
@@ -21,218 +21,270 @@
     grid-template-rows: auto 1fr; overflow: hidden;
   }
   header {
-    padding: 18px 28px; display: flex;
-    align-items: baseline; gap: 20px;
+    padding: 14px 24px; display: flex;
+    align-items: center; gap: 16px;
     border-bottom: 1px solid var(--border);
     background: var(--surface); flex-wrap: wrap;
   }
-  header h1 { font-family: 'DM Serif Display', serif; font-size: 1.25rem; font-weight: 400; }
-  header p  { font-size: 0.78rem; color: var(--muted); font-weight: 300; }
-  #status {
-    margin-left: auto; font-size: 0.72rem; color: var(--accent);
-    background: rgba(255,255,255,0.04);
-    padding: 4px 12px; border-radius: 20px;
-    border: 1px solid var(--border); transition: color 0.3s;
+  header h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.15rem; font-weight: 400; white-space: nowrap;
   }
-  #status.done  { color: var(--muted); }
-  #status.error { color: #e05252; }
+  #status {
+    font-size: 0.72rem; color: var(--accent);
+    background: rgba(245,200,66,0.08);
+    padding: 4px 12px; border-radius: 20px;
+    border: 1px solid rgba(245,200,66,0.2);
+  }
+  #status.done  { color: var(--muted); background: rgba(255,255,255,0.04); border-color: var(--border); }
+  #status.error { color: #e05252; background: rgba(224,82,82,0.08); border-color: rgba(224,82,82,0.2); }
+
+  /* Meny */
+  #metric-menu {
+    display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap;
+  }
+  .metric-btn {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.72rem; font-weight: 500;
+    padding: 5px 12px; border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent; color: var(--muted);
+    cursor: pointer; transition: all 0.2s; white-space: nowrap;
+  }
+  .metric-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--text); }
+  .metric-btn.active {
+    background: var(--accent); color: #0f1117;
+    border-color: var(--accent); font-weight: 500;
+  }
+  .metric-btn:disabled {
+    opacity: 0.35; cursor: not-allowed;
+    text-decoration: line-through;
+  }
+
   #map { width: 100%; height: 100%; background: var(--bg); }
   .leaflet-container { background: #0f1117 !important; }
+
+  /* Progress */
   #progress-wrap {
     position: absolute; bottom: 0; left: 0; right: 0;
     height: 2px; z-index: 2000; pointer-events: none;
   }
-  #progress-bar { height: 100%; width: 0%; background: var(--accent); transition: width 0.3s ease; }
+  #progress-bar { height: 100%; width: 0%; background: var(--accent); transition: width 0.4s ease; }
+
+  /* Tidslider */
+  #time-panel {
+    position: absolute; bottom: 24px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 20px;
+    display: flex; align-items: center; gap: 14px;
+    min-width: 340px;
+  }
+  #time-panel label { font-size: 0.72rem; color: var(--muted); white-space: nowrap; }
+  #year-slider {
+    flex: 1; accent-color: var(--accent);
+    height: 4px; cursor: pointer;
+  }
+  #year-display {
+    font-size: 0.82rem; font-weight: 500;
+    color: var(--accent); min-width: 54px; text-align: right;
+  }
+
+  /* Legend */
   .legend {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: 10px; padding: 14px 16px;
-    font-family: 'DM Sans', sans-serif; color: var(--text); min-width: 170px;
+    font-family: 'DM Sans', sans-serif; min-width: 170px;
   }
   .legend h4 {
-    font-size: 0.7rem; font-weight: 500;
+    font-size: 0.68rem; font-weight: 500;
     text-transform: uppercase; letter-spacing: 0.08em;
     color: var(--muted); margin-bottom: 10px;
   }
   .legend-bar {
     height: 8px; border-radius: 4px;
-    background: linear-gradient(to right, #e05252, #e09b30, #c8f04a);
+    background: linear-gradient(to right, #2166ac, #74add1, #fee090, #f46d43, #d73027);
     margin-bottom: 6px;
   }
-  .legend-labels { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--muted); }
-  .legend-item { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 0.72rem; color: var(--muted); }
+  .legend-labels { display: flex; justify-content: space-between; font-size: 0.68rem; color: var(--muted); }
+  .legend-item { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 0.7rem; color: var(--muted); }
   .legend-swatch { width: 12px; height: 12px; border-radius: 2px; flex-shrink: 0; }
+
+  /* Tooltip */
   .leaflet-tooltip {
     background: var(--surface) !important; border: 1px solid var(--border) !important;
     border-radius: 8px !important; color: var(--text) !important;
     font-family: 'DM Sans', sans-serif !important; font-size: 0.82rem !important;
-    padding: 8px 12px !important; box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important;
+    padding: 8px 12px !important; box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
     pointer-events: none !important;
   }
-  .tooltip-name  { font-weight: 500; margin-bottom: 3px; }
-  .tooltip-value { color: var(--accent); font-weight: 500; }
-  .tooltip-sub   { color: var(--muted); font-size: 0.72rem; margin-top: 2px; }
-  .tooltip-no-data { color: var(--muted); font-style: italic; }
+  .tt-name  { font-weight: 500; margin-bottom: 3px; }
+  .tt-value { color: var(--accent); font-weight: 500; }
+  .tt-sub   { color: var(--muted); font-size: 0.7rem; margin-top: 2px; }
+  .tt-none  { color: var(--muted); font-style: italic; }
 </style>
 </head>
 <body>
 <header>
   <h1>Sveriges skolresultat</h1>
-  <p>Meritvärde åk 9 · 2024/25 · medelvärde per kommun</p>
-  <span id="status">Startar...</span>
+  <span id="status">Laddar data...</span>
+  <div id="metric-menu">
+    <button class="metric-btn active" data-metric="merit">Meritvärde åk 9</button>
+    <button class="metric-btn" data-metric="certifiedTeachers" disabled>Behöriga lärare</button>
+    <button class="metric-btn" data-metric="allPassed" disabled>Godkända elever</button>
+  </div>
 </header>
+
 <div id="map"></div>
 <div id="progress-wrap"><div id="progress-bar"></div></div>
 
-<script>
-const GEOJSON_URL = 'https://raw.githubusercontent.com/GioPalusa/SwedenGeoJSON/a176ba59cc52140383dea3bdb72e95eb586053d9/Kommun/kommun.geojson';
-const API_BASE    = 'https://api.skolverket.se/planned-educations/v3';
-const TARGET_YEAR = '2024/25';
-const BATCH_SIZE  = 10;
-const PAGE_SIZE   = 100;
-const MIN_VALUE   = 180;
-const MAX_VALUE   = 290;
+<div id="time-panel">
+  <label>Läsår</label>
+  <input type="range" id="year-slider" min="0" max="4" value="4" step="1">
+  <span id="year-display">2024/25</span>
+</div>
 
-const statusEl   = document.getElementById('status');
+<script>
+const YEARS = ['2020/21','2021/22','2022/23','2023/24','2024/25'];
+const DATA_URL   = 'https://KennethSwedlund.github.io/skolkarta/data.json';
+const GEOJSON_URL = 'https://raw.githubusercontent.com/GioPalusa/SwedenGeoJSON/a176ba59cc52140383dea3bdb72e95eb586053d9/Kommun/kommun.geojson';
+
+const METRIC_LABELS = {
+  merit: 'Meritvärde åk 9',
+  certifiedTeachers: 'Behöriga lärare (%)',
+  allPassed: 'Godkända elever (%)',
+};
+
+const METRIC_RANGES = {
+  merit: [180, 290],
+  certifiedTeachers: [50, 100],
+  allPassed: [60, 100],
+};
+
+let currentMetric = 'merit';
+let currentYearIdx = 4;
+let skoldata = null;
+let geojson  = null;
+let geoLayer = null;
+let legendControl = null;
+
+const statusEl  = document.getElementById('status');
 const progressEl = document.getElementById('progress-bar');
+const slider    = document.getElementById('year-slider');
+const yearDisp  = document.getElementById('year-display');
 
 function setStatus(msg, cls = '') { statusEl.textContent = msg; statusEl.className = cls; }
 function setProgress(pct) { progressEl.style.width = Math.min(100, pct) + '%'; }
 
-function getColor(value) {
+// Färgblindsäker skala: blå→gul→röd (RdYlBu omvänd)
+function getColor(value, metric) {
   if (value == null) return '#2a2a35';
-  const t = Math.max(0, Math.min(1, (value - MIN_VALUE) / (MAX_VALUE - MIN_VALUE)));
-  if (t < 0.5) {
-    const u = t * 2;
-    return `rgb(224,${Math.round(82 + 73*u)},${Math.round(82 - 34*u)})`;
-  }
-  const u = (t - 0.5) * 2;
-  return `rgb(${Math.round(224 - 24*u)},${Math.round(155 + 85*u)},${Math.round(48 + 26*u)})`;
+  const [min, max] = METRIC_RANGES[metric];
+  const t = Math.max(0, Math.min(1, (value - min) / (max - min)));
+  // Blå (lågt) → gul (mitten) → röd (högt)
+  // Stops: #2166ac, #74add1, #e0f3f8, #fee090, #f46d43, #d73027
+  const stops = [
+    [33, 102, 172],   // blå
+    [116, 173, 209],  // ljusblå
+    [224, 243, 248],  // nästan vit
+    [254, 224, 144],  // gul
+    [244, 109, 67],   // orange
+    [215, 48, 39],    // röd
+  ];
+  const scaled = t * (stops.length - 1);
+  const i = Math.min(Math.floor(scaled), stops.length - 2);
+  const u = scaled - i;
+  const a = stops[i], b = stops[i+1];
+  const r = Math.round(a[0] + (b[0]-a[0])*u);
+  const g = Math.round(a[1] + (b[1]-a[1])*u);
+  const bl = Math.round(a[2] + (b[2]-a[2])*u);
+  return `rgb(${r},${g},${bl})`;
 }
 
-const map = L.map('map', { center: [62.5, 16], zoom: 5 });
+// Karta – låst till Sverige
+const swedenBounds = L.latLngBounds([54.5, 9.5], [69.5, 26.0]);
+const map = L.map('map', {
+  center: [62.5, 16], zoom: 5,
+  maxBounds: swedenBounds,
+  maxBoundsViscosity: 0.9,
+  minZoom: 4,
+});
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
   attribution: '© OpenStreetMap © CARTO', subdomains: 'abcd', maxZoom: 19
 }).addTo(map);
 
-async function batchFetch(items, fetchFn, onProgress) {
-  const results = new Array(items.length);
-  for (let i = 0; i < items.length; i += BATCH_SIZE) {
-    const chunk = items.slice(i, i + BATCH_SIZE);
-    const res   = await Promise.all(chunk.map(fetchFn));
-    res.forEach((r, j) => { results[i + j] = r; });
-    onProgress(Math.min(i + BATCH_SIZE, items.length), items.length);
-  }
-  return results;
+function getValue(kod) {
+  const year = YEARS[currentYearIdx];
+  return skoldata?.[kod]?.[currentMetric]?.[year] ?? null;
 }
 
-async function fetchAllSchools() {
-  setStatus('Hämtar skollista sida 1...');
-  const first = await fetch(`${API_BASE}/school-units?size=${PAGE_SIZE}&page=0`).then(r => r.json());
-  const totalPages = first.body.page.totalPages;
-  let schools = first.body._embedded.listedSchoolUnits;
-
-  setStatus(`Hämtar skollista (${totalPages} sidor)...`);
-  const pages = Array.from({ length: totalPages - 1 }, (_, i) => i + 1);
-
-  await batchFetch(pages, async (page) => {
-    const d = await fetch(`${API_BASE}/school-units?size=${PAGE_SIZE}&page=${page}`).then(r => r.json());
-    schools = schools.concat(d.body._embedded.listedSchoolUnits);
-  }, (done, total) => {
-    setProgress((done / total) * 25);
-    setStatus(`Skollista: ${schools.length} skolor hämtade...`);
-  });
-
-  return schools;
+function styleFeature(feature) {
+  const kod   = feature.properties.kommunkod;
+  const value = getValue(kod);
+  return {
+    fillColor: getColor(value, currentMetric),
+    fillOpacity: value != null ? 0.8 : 0.2,
+    color: '#1a1f2e', weight: 0.5, opacity: 1,
+  };
 }
 
-function filterHighGradeSchools(schools) {
-  return schools.filter(s =>
-    s.typeOfSchooling?.some(t =>
-      t.code === 'gr' && t.schoolYears?.some(y => ['7','8','9'].includes(y))
-    )
-  );
+function tooltipContent(feature) {
+  const kod   = feature.properties.kommunkod;
+  const namn  = feature.properties.namnkortform || kod;
+  const value = getValue(kod);
+  const year  = YEARS[currentYearIdx];
+  return `
+    <div class="tt-name">${namn}</div>
+    ${value != null
+      ? `<div class="tt-value">${METRIC_LABELS[currentMetric]}: ${value}</div>
+         <div class="tt-sub">${year}</div>`
+      : `<div class="tt-none">Ingen data för ${year}</div>`}
+  `;
 }
 
-async function fetchMeritValue(school) {
-  try {
-    const res = await fetch(`${API_BASE}/school-units/${school.code}/statistics/gr`);
-    if (!res.ok) return null;
-    const data = await res.json();
-    const entries = data.body?.averageGradesMeritRating9thGrade;
-    if (!entries) return null;
-    const entry = entries.find(e => e.timePeriod === TARGET_YEAR && e.valueType === 'EXISTS');
-    return entry ? parseFloat(entry.value.replace(',', '.')) : null;
-  } catch { return null; }
-}
+function renderLayer() {
+  if (geoLayer) geoLayer.remove();
 
-function aggregateByMunicipality(schools, meritValues) {
-  const acc = {};
-  schools.forEach((s, i) => {
-    const val = meritValues[i];
-    if (val == null) return;
-    const kod = s.geographicalAreaCode;
-    if (!acc[kod]) acc[kod] = { sum: 0, count: 0 };
-    acc[kod].sum += val;
-    acc[kod].count += 1;
-  });
-  const result = {};
-  Object.entries(acc).forEach(([kod, { sum, count }]) => {
-    result[kod] = Math.round((sum / count) * 10) / 10;
-  });
-  return result;
-}
-
-function renderMap(geojson, skoldata) {
-  const values    = Object.values(skoldata);
-  const actualMin = Math.round(Math.min(...values) * 10) / 10;
-  const actualMax = Math.round(Math.max(...values) * 10) / 10;
-  const mid       = Math.round((actualMin + actualMax) / 2 * 10) / 10;
-
-  L.geoJSON(geojson, {
-    style: feature => {
-      const kod   = feature.properties.kommunkod;
-      const value = skoldata[kod] ?? null;
-      return {
-        fillColor: getColor(value), fillOpacity: value != null ? 0.78 : 0.25,
-        color: '#1a1f2e', weight: 0.5, opacity: 1,
-      };
-    },
+  geoLayer = L.geoJSON(geojson, {
+    style: styleFeature,
     onEachFeature: (feature, layer) => {
-      const kod   = feature.properties.kommunkod;
-      const namn  = feature.properties.namnkortform || kod;
-      const value = skoldata[kod] ?? null;
-
-      layer.bindTooltip(`
-        <div class="tooltip-name">${namn}</div>
-        ${value != null
-          ? `<div class="tooltip-value">Meritvärde: ${value}</div>
-             <div class="tooltip-sub">Snitt grundskolor åk 7–9 · ${TARGET_YEAR}</div>`
-          : `<div class="tooltip-no-data">Ingen data tillgänglig</div>`}
-      `, { sticky: true, opacity: 1 });
+      const tooltip = L.tooltip({ sticky: true, opacity: 1, permanent: false });
+      tooltip.setContent(tooltipContent(feature));
+      layer.bindTooltip(tooltip);
 
       layer.on({
         mouseover: e => {
+          tooltip.setContent(tooltipContent(feature));
           e.target.setStyle({ fillOpacity: 1, weight: 1.5, color: '#ffffff' });
           e.target.bringToFront();
         },
         mouseout: e => {
-          e.target.setStyle({
-            fillOpacity: value != null ? 0.78 : 0.25,
-            weight: 0.5, color: '#1a1f2e'
-          });
+          const kod = feature.properties.kommunkod;
+          const val = getValue(kod);
+          e.target.setStyle({ fillOpacity: val != null ? 0.8 : 0.2, weight: 0.5, color: '#1a1f2e' });
         }
       });
     }
   }).addTo(map);
 
-  const legend = L.control({ position: 'bottomleft' });
-  legend.onAdd = () => {
+  updateLegend();
+}
+
+function updateLegend() {
+  if (legendControl) legendControl.remove();
+  const [min, max] = METRIC_RANGES[currentMetric];
+  const mid = Math.round((min + max) / 2);
+  legendControl = L.control({ position: 'bottomright' });
+  legendControl.onAdd = () => {
     const div = L.DomUtil.create('div', 'legend');
     div.innerHTML = `
-      <h4>Meritvärde åk 9</h4>
+      <h4>${METRIC_LABELS[currentMetric]}</h4>
       <div class="legend-bar"></div>
       <div class="legend-labels">
-        <span>${actualMin}</span><span>${mid}</span><span>${actualMax}</span>
+        <span>${min}</span><span>${mid}</span><span>${max}</span>
       </div>
       <div class="legend-item">
         <div class="legend-swatch" style="background:#2a2a35;border:1px solid #444"></div>
@@ -240,39 +292,53 @@ function renderMap(geojson, skoldata) {
       </div>`;
     return div;
   };
-  legend.addTo(map);
+  legendControl.addTo(map);
+}
 
-  setStatus(`${Object.keys(skoldata).length} kommuner klara`, 'done');
-  setProgress(100);
-  setTimeout(() => { progressEl.style.opacity = '0'; }, 1500);
+// Slider
+slider.addEventListener('input', () => {
+  currentYearIdx = parseInt(slider.value);
+  yearDisp.textContent = YEARS[currentYearIdx];
+  renderLayer();
+});
+
+// Meny
+document.querySelectorAll('.metric-btn:not(:disabled)').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.metric-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentMetric = btn.dataset.metric;
+    renderLayer();
+  });
+});
+
+// Aktivera alla knappar när data laddats
+function enableAllMetrics() {
+  document.querySelectorAll('.metric-btn').forEach(btn => {
+    btn.disabled = false;
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.metric-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentMetric = btn.dataset.metric;
+      renderLayer();
+    });
+  });
 }
 
 async function main() {
   try {
-    const [geojson, allSchools] = await Promise.all([
+    setStatus('Laddar data...');
+    const [geo, data] = await Promise.all([
       fetch(GEOJSON_URL).then(r => r.json()),
-      fetchAllSchools()
+      fetch(DATA_URL).then(r => r.json()),
     ]);
-
-    const relevant = filterHighGradeSchools(allSchools);
-    setStatus(`Hämtar statistik för ${relevant.length} skolor...`);
-    setProgress(25);
-
-    const meritValues = await batchFetch(
-      relevant,
-      fetchMeritValue,
-      (done, total) => {
-        setProgress(25 + (done / total) * 70);
-        setStatus(`Statistik: ${done}/${total} skolor`);
-      }
-    );
-
-    setStatus('Beräknar kommunmedelvärden...');
-    setProgress(96);
-
-    const skoldata = aggregateByMunicipality(relevant, meritValues);
-    renderMap(geojson, skoldata);
-
+    geojson  = geo;
+    skoldata = data;
+    setProgress(100);
+    enableAllMetrics();
+    renderLayer();
+    setStatus(`${Object.keys(skoldata).length} kommuner · ${YEARS[currentYearIdx]}`, 'done');
+    setTimeout(() => { progressEl.style.opacity = '0'; }, 1500);
   } catch (err) {
     setStatus('Fel: ' + err.message, 'error');
     console.error(err);
