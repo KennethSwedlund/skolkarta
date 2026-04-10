@@ -7,340 +7,550 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap');
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --bg: #0f1117; --surface: #181c27; --surface2: #1e2333;
-    --border: rgba(255,255,255,0.08);
-    --text: #e8e6e0; --muted: #7a7870; --accent: #f5c842;
-  }
-  body {
-    background: var(--bg); color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-    height: 100vh; display: grid;
-    grid-template-rows: auto 1fr; overflow: hidden;
-  }
-  header {
-    padding: 14px 24px; display: flex;
-    align-items: center; gap: 16px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface); flex-wrap: wrap;
-  }
-  header h1 {
-    font-family: 'DM Serif Display', serif;
-    font-size: 1.15rem; font-weight: 400; white-space: nowrap;
-  }
-  #status {
-    font-size: 0.72rem; color: var(--accent);
-    background: rgba(245,200,66,0.08);
-    padding: 4px 12px; border-radius: 20px;
-    border: 1px solid rgba(245,200,66,0.2);
-  }
-  #status.done  { color: var(--muted); background: rgba(255,255,255,0.04); border-color: var(--border); }
-  #status.error { color: #e05252; background: rgba(224,82,82,0.08); border-color: rgba(224,82,82,0.2); }
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--surface:#181c27;--surface2:#1e2333;
+  --border:rgba(255,255,255,0.08);--text:#e8e6e0;--muted:#7a7870;
+  --accent:#f5c842;--blue:#4a9eff;
+}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;height:100vh;display:grid;grid-template-rows:auto 1fr;overflow:hidden}
 
-  /* Meny */
-  #metric-menu {
-    display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap;
-  }
-  .metric-btn {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.72rem; font-weight: 500;
-    padding: 5px 12px; border-radius: 20px;
-    border: 1px solid var(--border);
-    background: transparent; color: var(--muted);
-    cursor: pointer; transition: all 0.2s; white-space: nowrap;
-  }
-  .metric-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--text); }
-  .metric-btn.active {
-    background: var(--accent); color: #0f1117;
-    border-color: var(--accent); font-weight: 500;
-  }
-  .metric-btn:disabled {
-    opacity: 0.35; cursor: not-allowed;
-    text-decoration: line-through;
-  }
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;flex-shrink:0}
+.logo{font-family:'DM Serif Display',serif;font-size:1.1rem;font-weight:400;white-space:nowrap}
+.metric-tabs{display:flex;gap:4px;flex-wrap:wrap}
+.tab{font-family:'DM Sans',sans-serif;font-size:11px;padding:4px 11px;border-radius:20px;border:1px solid var(--border);color:var(--muted);background:transparent;cursor:pointer;white-space:nowrap;transition:all 0.15s}
+.tab:hover:not(:disabled){border-color:var(--accent);color:var(--text)}
+.tab.active{background:var(--accent);color:#0f1117;border-color:var(--accent);font-weight:500}
+.tab:disabled{opacity:0.3;text-decoration:line-through;cursor:not-allowed}
+.year-row{display:flex;align-items:center;gap:8px;margin-left:auto}
+.year-label{font-size:11px;color:var(--muted)}
+.year-pills{display:flex;gap:3px}
+.ypill{font-size:10px;padding:3px 8px;border-radius:10px;border:1px solid var(--border);color:var(--muted);cursor:pointer;transition:all 0.15s}
+.ypill.active{border-color:var(--accent);color:var(--accent)}
+.ypill:hover:not(.active){color:var(--text)}
+#status{font-size:11px;color:var(--accent);background:rgba(245,200,66,0.08);padding:3px 10px;border-radius:20px;border:1px solid rgba(245,200,66,0.2)}
+#status.done{color:var(--muted);background:rgba(255,255,255,0.04);border-color:var(--border)}
+#status.error{color:#e05252;background:rgba(224,82,82,0.08);border-color:rgba(224,82,82,0.2)}
 
-  #map { width: 100%; height: 100%; background: var(--bg); }
-  .leaflet-container { background: #0f1117 !important; }
+.body{display:flex;overflow:hidden}
+#map{flex:1;background:var(--bg)}
+.leaflet-container{background:#0d1019!important}
 
-  /* Progress */
-  #progress-wrap {
-    position: absolute; bottom: 0; left: 0; right: 0;
-    height: 2px; z-index: 2000; pointer-events: none;
-  }
-  #progress-bar { height: 100%; width: 0%; background: var(--accent); transition: width 0.4s ease; }
+.sidebar{width:300px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;transition:width 0.25s}
+.sidebar.hidden{width:0;border:none}
 
-  /* Tidslider */
-  #time-panel {
-    position: absolute; bottom: 24px; left: 50%;
-    transform: translateX(-50%);
-    z-index: 1000;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 12px 20px;
-    display: flex; align-items: center; gap: 14px;
-    min-width: 340px;
-  }
-  #time-panel label { font-size: 0.72rem; color: var(--muted); white-space: nowrap; }
-  #year-slider {
-    flex: 1; accent-color: var(--accent);
-    height: 4px; cursor: pointer;
-  }
-  #year-display {
-    font-size: 0.82rem; font-weight: 500;
-    color: var(--accent); min-width: 54px; text-align: right;
-  }
+.empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;gap:12px}
+.empty-icon{width:40px;height:40px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:18px}
+.empty-text{font-size:12px;color:var(--muted);line-height:1.6}
 
-  /* Legend */
-  .legend {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; padding: 14px 16px;
-    font-family: 'DM Sans', sans-serif; min-width: 170px;
-  }
-  .legend h4 {
-    font-size: 0.68rem; font-weight: 500;
-    text-transform: uppercase; letter-spacing: 0.08em;
-    color: var(--muted); margin-bottom: 10px;
-  }
-  .legend-bar {
-    height: 8px; border-radius: 4px;
-    background: linear-gradient(to right, #2166ac, #74add1, #fee090, #f46d43, #d73027);
-    margin-bottom: 6px;
-  }
-  .legend-labels { display: flex; justify-content: space-between; font-size: 0.68rem; color: var(--muted); }
-  .legend-item { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 0.7rem; color: var(--muted); }
-  .legend-swatch { width: 12px; height: 12px; border-radius: 2px; flex-shrink: 0; }
+.detail{display:none;flex-direction:column;height:100%;overflow:hidden}
+.detail.visible{display:flex}
 
-  /* Tooltip */
-  .leaflet-tooltip {
-    background: var(--surface) !important; border: 1px solid var(--border) !important;
-    border-radius: 8px !important; color: var(--text) !important;
-    font-family: 'DM Sans', sans-serif !important; font-size: 0.82rem !important;
-    padding: 8px 12px !important; box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
-    pointer-events: none !important;
-  }
-  .tt-name  { font-weight: 500; margin-bottom: 3px; }
-  .tt-value { color: var(--accent); font-weight: 500; }
-  .tt-sub   { color: var(--muted); font-size: 0.7rem; margin-top: 2px; }
-  .tt-none  { color: var(--muted); font-style: italic; }
+.detail-header{padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+.detail-back{font-size:11px;color:var(--muted);cursor:pointer;margin-bottom:6px;display:inline-flex;align-items:center;gap:4px}
+.detail-back:hover{color:var(--text)}
+.detail-name{font-size:16px;font-weight:500;color:var(--text)}
+.detail-sub{font-size:11px;color:var(--muted);margin-top:2px}
+
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+.stat-card{background:var(--surface2);border-radius:8px;padding:8px 10px}
+.stat-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:3px}
+.stat-val{font-size:19px;font-weight:500;color:var(--accent)}
+.stat-val.blue{color:var(--blue);font-size:15px}
+.stat-sub{font-size:9px;color:var(--muted);margin-top:2px}
+
+.schools-bar{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+.schools-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em}
+.sort-btns{display:flex;gap:4px}
+.sort-btn{font-size:10px;padding:2px 8px;border-radius:10px;border:1px solid var(--border);color:var(--muted);background:transparent;cursor:pointer;transition:all 0.15s}
+.sort-btn.active{border-color:var(--accent);color:var(--accent)}
+
+.schools-list{flex:1;overflow-y:auto;padding:4px 0}
+.schools-list::-webkit-scrollbar{width:3px}
+.schools-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+.school-item{padding:0}
+.school-row{display:flex;align-items:center;gap:8px;padding:7px 16px;cursor:pointer;transition:background 0.1s}
+.school-row:hover{background:rgba(255,255,255,0.04)}
+.school-row.open{background:rgba(255,255,255,0.04)}
+.s-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.s-name{font-size:12px;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s-badge{font-size:9px;padding:1px 5px;border-radius:4px;flex-shrink:0}
+.s-badge.kommunal{background:rgba(74,158,255,0.15);color:#4a9eff}
+.s-badge.fristående{background:rgba(245,200,66,0.12);color:var(--accent)}
+.s-trend{font-size:11px;flex-shrink:0;width:14px;text-align:center}
+.s-trend.up{color:#4ade80}
+.s-trend.down{color:#f87171}
+.s-val{font-size:12px;color:var(--muted);flex-shrink:0;min-width:28px;text-align:right}
+
+.sparkline-wrap{padding:0 16px 12px;border-bottom:1px solid var(--border);display:none}
+.sparkline-wrap.open{display:block}
+.sparkline-title{font-size:10px;color:var(--muted);margin-bottom:6px}
+.sparkline-svg{width:100%;height:48px}
+
+.leaflet-tooltip{background:var(--surface)!important;border:1px solid var(--border)!important;border-radius:8px!important;color:var(--text)!important;font-family:'DM Sans',sans-serif!important;font-size:12px!important;padding:7px 11px!important;box-shadow:0 4px 20px rgba(0,0,0,0.5)!important;pointer-events:none!important}
+.tt-name{font-weight:500;margin-bottom:2px}
+.tt-val{color:var(--accent);font-weight:500}
+.tt-sub{color:var(--muted);font-size:10px;margin-top:1px}
+.tt-none{color:var(--muted);font-style:italic}
+
+.legend{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-family:'DM Sans',sans-serif;min-width:160px}
+.legend h4{font-size:9px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:8px}
+.legend-bar{height:7px;border-radius:4px;margin-bottom:5px}
+.legend-labels{display:flex;justify-content:space-between;font-size:9px;color:var(--muted)}
+.legend-item{display:flex;align-items:center;gap:7px;margin-top:7px;font-size:10px;color:var(--muted)}
+.legend-swatch{width:11px;height:11px;border-radius:2px;flex-shrink:0}
+
+#progress-wrap{position:absolute;bottom:0;left:0;right:0;height:2px;z-index:2000;pointer-events:none}
+#progress-bar{height:100%;width:0%;background:var(--accent);transition:width 0.4s ease}
 </style>
 </head>
 <body>
+
 <header>
-  <h1>Sveriges skolresultat</h1>
-  <span id="status">Laddar data...</span>
-  <div id="metric-menu">
-    <button class="metric-btn active" data-metric="merit">Meritvärde åk 9</button>
-    <button class="metric-btn" data-metric="certifiedTeachers" disabled>Behöriga lärare</button>
-    <button class="metric-btn" data-metric="allPassed" disabled>Godkända elever</button>
+  <span class="logo">Sveriges skolresultat</span>
+  <div class="metric-tabs" id="metric-tabs"></div>
+  <span id="status">Laddar...</span>
+  <div class="year-row">
+    <span class="year-label">Läsår</span>
+    <div class="year-pills" id="year-pills"></div>
   </div>
 </header>
 
-<div id="map"></div>
-<div id="progress-wrap"><div id="progress-bar"></div></div>
+<div class="body">
+  <div id="map"></div>
+  <div id="progress-wrap"><div id="progress-bar"></div></div>
 
-<div id="time-panel">
-  <label>Läsår</label>
-  <input type="range" id="year-slider" min="0" max="4" value="4" step="1">
-  <span id="year-display">2024/25</span>
+  <div class="sidebar" id="sidebar">
+    <div class="empty-state" id="empty-state">
+      <div class="empty-icon">&#9670;</div>
+      <p class="empty-text">Klicka på en kommun för att se detaljer och alla skolor</p>
+    </div>
+    <div class="detail" id="detail">
+      <div class="detail-header">
+        <div class="detail-back" id="back-btn">&#8592; Alla kommuner</div>
+        <div class="detail-name" id="d-name"></div>
+        <div class="detail-sub" id="d-sub"></div>
+      </div>
+      <div class="stats-grid" id="d-stats"></div>
+      <div class="schools-bar">
+        <span class="schools-lbl" id="d-count"></span>
+        <div class="sort-btns">
+          <button class="sort-btn active" id="sort-val">Värde</button>
+          <button class="sort-btn" id="sort-name">Namn</button>
+        </div>
+      </div>
+      <div class="schools-list" id="d-schools"></div>
+    </div>
+  </div>
 </div>
 
 <script>
-const YEARS = ['2020/21','2021/22','2022/23','2023/24','2024/25'];
-const DATA_URL   = 'https://KennethSwedlund.github.io/skolkarta/data.json';
+const DATA_URL    = 'https://KennethSwedlund.github.io/skolkarta/data.json';
 const GEOJSON_URL = 'https://raw.githubusercontent.com/GioPalusa/SwedenGeoJSON/a176ba59cc52140383dea3bdb72e95eb586053d9/Kommun/kommun.geojson';
+const YEARS = ['2020/21','2021/22','2022/23','2023/24','2024/25'];
 
-const METRIC_LABELS = {
-  merit: 'Meritvärde åk 9',
-  certifiedTeachers: 'Behöriga lärare (%)',
-  allPassed: 'Godkända elever (%)',
-};
-
-const METRIC_RANGES = {
-  merit: [180, 290],
-  certifiedTeachers: [50, 100],
-  allPassed: [60, 100],
-};
+const METRICS = [
+  { key:'merit',            label:'Meritvärde åk 9',    range:[180,290], unit:'' },
+  { key:'certifiedTeachers',label:'Behöriga lärare',    range:[50,100],  unit:'%' },
+  { key:'allPassed9',       label:'Godkända åk 9',      range:[60,100],  unit:'%' },
+  { key:'allPassed6',       label:'Godkända åk 6',      range:[60,100],  unit:'%' },
+  { key:'studentsPerTeacher',label:'Elever/lärare',     range:[8,20],    unit:'' },
+  { key:'provSVE9',         label:'Prov: SV åk 9',      range:[10,20],   unit:'' },
+  { key:'provENG9',         label:'Prov: EN åk 9',      range:[10,20],   unit:'' },
+  { key:'provMA9',          label:'Prov: MA åk 9',      range:[8,20],    unit:'' },
+  { key:'salsa',            label:'SALSA residual',      range:[-30,30],  unit:'', disabled:true },
+];
 
 let currentMetric = 'merit';
 let currentYearIdx = 4;
-let skoldata = null;
-let geojson  = null;
+let sortBy = 'val';
+let appData = null;
+let geojson = null;
 let geoLayer = null;
 let legendControl = null;
+let selectedKommun = null;
 
-const statusEl  = document.getElementById('status');
+const statusEl   = document.getElementById('status');
 const progressEl = document.getElementById('progress-bar');
-const slider    = document.getElementById('year-slider');
-const yearDisp  = document.getElementById('year-display');
 
-function setStatus(msg, cls = '') { statusEl.textContent = msg; statusEl.className = cls; }
-function setProgress(pct) { progressEl.style.width = Math.min(100, pct) + '%'; }
+function setStatus(msg,cls=''){statusEl.textContent=msg;statusEl.className=cls}
+function setProgress(pct){progressEl.style.width=Math.min(100,pct)+'%'}
 
-// Färgblindsäker skala: blå→gul→röd (RdYlBu omvänd)
+function getMetric(){return METRICS.find(m=>m.key===currentMetric)}
+function getYear(){return YEARS[currentYearIdx]}
+
 function getColor(value, metric) {
-  if (value == null) return '#2a2a35';
-  const [min, max] = METRIC_RANGES[metric];
-  const t = Math.max(0, Math.min(1, (value - min) / (max - min)));
-  // Blå (lågt) → gul (mitten) → röd (högt)
-  // Stops: #2166ac, #74add1, #e0f3f8, #fee090, #f46d43, #d73027
-  const stops = [
-    [33, 102, 172],   // blå
-    [116, 173, 209],  // ljusblå
-    [224, 243, 248],  // nästan vit
-    [254, 224, 144],  // gul
-    [244, 109, 67],   // orange
-    [215, 48, 39],    // röd
-  ];
-  const scaled = t * (stops.length - 1);
-  const i = Math.min(Math.floor(scaled), stops.length - 2);
-  const u = scaled - i;
-  const a = stops[i], b = stops[i+1];
-  const r = Math.round(a[0] + (b[0]-a[0])*u);
-  const g = Math.round(a[1] + (b[1]-a[1])*u);
-  const bl = Math.round(a[2] + (b[2]-a[2])*u);
-  return `rgb(${r},${g},${bl})`;
+  if (value==null) return '#2a2a35';
+  const m = METRICS.find(m=>m.key===metric)||METRICS[0];
+  const [min,max] = m.range;
+  const t = Math.max(0,Math.min(1,(value-min)/(max-min)));
+  const stops=[[33,102,172],[116,173,209],[224,243,248],[254,224,144],[244,109,67],[215,48,39]];
+  const s=t*(stops.length-1);
+  const i=Math.min(Math.floor(s),stops.length-2);
+  const u=s-i;
+  const a=stops[i],b=stops[i+1];
+  return `rgb(${Math.round(a[0]+(b[0]-a[0])*u)},${Math.round(a[1]+(b[1]-a[1])*u)},${Math.round(a[2]+(b[2]-a[2])*u)})`;
 }
 
-// Karta – låst till Sverige
-const swedenBounds = L.latLngBounds([54.5, 9.5], [69.5, 26.0]);
+function getTrend(skolData, metric) {
+  const years = appData.skolor[skolData]?.skolverket?.[metric];
+  if (!years) return 0;
+  const vals = YEARS.map(y=>years[y]).filter(v=>v!=null);
+  if (vals.length < 2) return 0;
+  return vals[vals.length-1] - vals[vals.length-2];
+}
+
+function getKommunVal(kod, metric, year) {
+  return appData?.kommuner?.[kod]?.skolverket?.[metric]?.[year] ?? null;
+}
+
+function getSkolVal(skolkod, metric, year) {
+  return appData?.skolor?.[skolkod]?.skolverket?.[metric]?.[year] ?? null;
+}
+
 const map = L.map('map', {
-  center: [62.5, 16], zoom: 5,
-  maxBounds: swedenBounds,
-  maxBoundsViscosity: 0.9,
-  minZoom: 4,
+  center:[62.5,16], zoom:5,
+  maxBounds:L.latLngBounds([54.5,9.5],[69.5,26.5]),
+  maxBoundsViscosity:0.9, minZoom:4
 });
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
-  attribution: '© OpenStreetMap © CARTO', subdomains: 'abcd', maxZoom: 19
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',{
+  attribution:'© OpenStreetMap © CARTO',subdomains:'abcd',maxZoom:19
 }).addTo(map);
 
-function getValue(kod) {
-  const year = YEARS[currentYearIdx];
-  return skoldata?.[kod]?.[currentMetric]?.[year] ?? null;
-}
-
 function styleFeature(feature) {
-  const kod   = feature.properties.kommunkod;
-  const value = getValue(kod);
+  const kod = feature.properties.kommunkod;
+  const val = getKommunVal(kod, currentMetric, getYear());
+  const isSelected = selectedKommun === kod;
   return {
-    fillColor: getColor(value, currentMetric),
-    fillOpacity: value != null ? 0.8 : 0.2,
-    color: '#1a1f2e', weight: 0.5, opacity: 1,
+    fillColor: getColor(val, currentMetric),
+    fillOpacity: val!=null ? (isSelected ? 1 : 0.78) : 0.2,
+    color: isSelected ? '#ffffff' : '#1a1f2e',
+    weight: isSelected ? 2 : 0.5,
+    opacity: 1,
   };
-}
-
-function tooltipContent(feature) {
-  const kod   = feature.properties.kommunkod;
-  const namn  = feature.properties.namnkortform || kod;
-  const value = getValue(kod);
-  const year  = YEARS[currentYearIdx];
-  return `
-    <div class="tt-name">${namn}</div>
-    ${value != null
-      ? `<div class="tt-value">${METRIC_LABELS[currentMetric]}: ${value}</div>
-         <div class="tt-sub">${year}</div>`
-      : `<div class="tt-none">Ingen data för ${year}</div>`}
-  `;
 }
 
 function renderLayer() {
   if (geoLayer) geoLayer.remove();
-
   geoLayer = L.geoJSON(geojson, {
     style: styleFeature,
     onEachFeature: (feature, layer) => {
-      const tooltip = L.tooltip({ sticky: true, opacity: 1, permanent: false });
-      tooltip.setContent(tooltipContent(feature));
-      layer.bindTooltip(tooltip);
+      const kod  = feature.properties.kommunkod;
+      const namn = feature.properties.namnkortform || kod;
+
+      layer.bindTooltip('', {sticky:true, opacity:1, permanent:false});
 
       layer.on({
         mouseover: e => {
-          tooltip.setContent(tooltipContent(feature));
-          e.target.setStyle({ fillOpacity: 1, weight: 1.5, color: '#ffffff' });
-          e.target.bringToFront();
+          const val = getKommunVal(kod, currentMetric, getYear());
+          const m = getMetric();
+          e.target.setTooltipContent(`
+            <div class="tt-name">${namn}</div>
+            ${val!=null
+              ? `<div class="tt-val">${m.label}: ${val}${m.unit}</div><div class="tt-sub">${getYear()}</div>`
+              : `<div class="tt-none">Ingen data</div>`}
+          `);
+          if (selectedKommun !== kod) {
+            e.target.setStyle({fillOpacity:1, weight:1, color:'#aaaaaa'});
+            e.target.bringToFront();
+          }
         },
         mouseout: e => {
-          const kod = feature.properties.kommunkod;
-          const val = getValue(kod);
-          e.target.setStyle({ fillOpacity: val != null ? 0.8 : 0.2, weight: 0.5, color: '#1a1f2e' });
-        }
+          if (selectedKommun !== kod) {
+            e.target.setStyle(styleFeature(feature));
+          }
+        },
+        click: () => openKommun(kod, namn),
       });
     }
   }).addTo(map);
-
   updateLegend();
 }
 
 function updateLegend() {
   if (legendControl) legendControl.remove();
-  const [min, max] = METRIC_RANGES[currentMetric];
-  const mid = Math.round((min + max) / 2);
-  legendControl = L.control({ position: 'bottomright' });
+  const m = getMetric();
+  const [min,max] = m.range;
+  const mid = Math.round((min+max)/2);
+  legendControl = L.control({position:'bottomright'});
   legendControl.onAdd = () => {
-    const div = L.DomUtil.create('div', 'legend');
+    const div = L.DomUtil.create('div','legend');
     div.innerHTML = `
-      <h4>${METRIC_LABELS[currentMetric]}</h4>
-      <div class="legend-bar"></div>
-      <div class="legend-labels">
-        <span>${min}</span><span>${mid}</span><span>${max}</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-swatch" style="background:#2a2a35;border:1px solid #444"></div>
-        Ingen data
-      </div>`;
+      <h4>${m.label}</h4>
+      <div class="legend-bar" style="background:linear-gradient(to right,#2166ac,#74add1,#fee090,#f46d43,#d73027)"></div>
+      <div class="legend-labels"><span>${min}${m.unit}</span><span>${mid}${m.unit}</span><span>${max}${m.unit}</span></div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#2a2a35;border:1px solid #444"></div>Ingen data</div>`;
     return div;
   };
   legendControl.addTo(map);
 }
 
-// Slider
-slider.addEventListener('input', () => {
-  currentYearIdx = parseInt(slider.value);
-  yearDisp.textContent = YEARS[currentYearIdx];
-  renderLayer();
-});
-
-// Meny
-document.querySelectorAll('.metric-btn:not(:disabled)').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.metric-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    currentMetric = btn.dataset.metric;
-    renderLayer();
-  });
-});
-
-// Aktivera alla knappar när data laddats
-function enableAllMetrics() {
-  document.querySelectorAll('.metric-btn').forEach(btn => {
-    btn.disabled = false;
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.metric-btn').forEach(b => b.classList.remove('active'));
+function buildMetricTabs() {
+  const wrap = document.getElementById('metric-tabs');
+  wrap.innerHTML = '';
+  METRICS.forEach(m => {
+    const btn = document.createElement('button');
+    btn.className = 'tab' + (m.key===currentMetric?' active':'') + (m.disabled?' disabled':'');
+    btn.textContent = m.label;
+    btn.disabled = !!m.disabled;
+    if (!m.disabled) btn.addEventListener('click', () => {
+      currentMetric = m.key;
+      document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');
-      currentMetric = btn.dataset.metric;
       renderLayer();
+      if (selectedKommun) refreshDetail(selectedKommun);
     });
+    wrap.appendChild(btn);
   });
 }
+
+function buildYearPills() {
+  const wrap = document.getElementById('year-pills');
+  wrap.innerHTML = '';
+  YEARS.forEach((y,i) => {
+    const pill = document.createElement('div');
+    pill.className = 'ypill' + (i===currentYearIdx?' active':'');
+    pill.textContent = y.slice(2);
+    pill.addEventListener('click', () => {
+      currentYearIdx = i;
+      document.querySelectorAll('.ypill').forEach(p=>p.classList.remove('active'));
+      pill.classList.add('active');
+      renderLayer();
+      if (selectedKommun) refreshDetail(selectedKommun);
+    });
+    wrap.appendChild(pill);
+  });
+}
+
+function getRiksSnitt(metric, year) {
+  const vals = Object.values(appData.kommuner)
+    .map(k=>k.skolverket?.[metric]?.[year])
+    .filter(v=>v!=null);
+  if (!vals.length) return null;
+  return Math.round(vals.reduce((a,b)=>a+b,0)/vals.length * 10)/10;
+}
+
+function getRank(kod, metric, year) {
+  const val = getKommunVal(kod, metric, year);
+  if (val==null) return null;
+  const all = Object.entries(appData.kommuner)
+    .map(([k,v])=>v.skolverket?.[metric]?.[year])
+    .filter(v=>v!=null)
+    .sort((a,b)=>b-a);
+  return all.indexOf(val)+1;
+}
+
+function openKommun(kod, namn) {
+  selectedKommun = kod;
+  renderLayer();
+
+  document.getElementById('empty-state').style.display = 'none';
+  const detail = document.getElementById('detail');
+  detail.classList.add('visible');
+
+  refreshDetail(kod, namn);
+}
+
+function refreshDetail(kod, namn) {
+  if (!namn) {
+    const feat = geojson.features.find(f=>f.properties.kommunkod===kod);
+    namn = feat?.properties?.namnkortform || kod;
+  }
+
+  const metric = currentMetric;
+  const year   = getYear();
+  const m      = getMetric();
+  const val    = getKommunVal(kod, metric, year);
+  const rikssnitt = getRiksSnitt(metric, year);
+  const rank   = getRank(kod, metric, year);
+
+  const skolorIKommun = Object.entries(appData.skolor)
+    .filter(([,s])=>s.kommunkod===kod && s.skolverket?.[metric]?.[year]!=null);
+
+  document.getElementById('d-name').textContent = namn;
+  document.getElementById('d-sub').textContent = `${skolorIKommun.length} skolor med data · ${year}`;
+  document.getElementById('d-count').textContent = `${skolorIKommun.length} skolor`;
+
+  const statsEl = document.getElementById('d-stats');
+  statsEl.innerHTML = `
+    <div class="stat-card">
+      <div class="stat-lbl">Kommunsnitt</div>
+      <div class="stat-val">${val!=null?val:'–'}${m.unit}</div>
+      <div class="stat-sub">${rank?`Plats ${rank} av 291`:'Ingen data'}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-lbl">Rikssnitt</div>
+      <div class="stat-val" style="color:var(--muted)">${rikssnitt!=null?rikssnitt:'–'}${m.unit}</div>
+      <div class="stat-sub">${year}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-lbl">Behöriga lärare</div>
+      <div class="stat-val blue">${getKommunVal(kod,'certifiedTeachers',year)!=null?getKommunVal(kod,'certifiedTeachers',year)+'%':'–'}</div>
+      <div class="stat-sub">Kommunsnitt</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-lbl">Elever/lärare</div>
+      <div class="stat-val blue">${getKommunVal(kod,'studentsPerTeacher',year)??'–'}</div>
+      <div class="stat-sub">Kommunsnitt</div>
+    </div>`;
+
+  renderSchools(kod, metric, year);
+}
+
+function renderSchools(kod, metric, year) {
+  const list = document.getElementById('d-schools');
+  list.innerHTML = '';
+
+  let skolar = Object.entries(appData.skolor)
+    .filter(([,s])=>s.kommunkod===kod)
+    .map(([skolkod,s])=>({
+      skolkod,
+      namn: s.namn,
+      typ: s.typ,
+      val: s.skolverket?.[metric]?.[year] ?? null,
+      years: s.skolverket?.[metric] ?? {},
+    }))
+    .filter(s=>s.val!=null);
+
+  if (sortBy==='val') skolar.sort((a,b)=>b.val-a.val);
+  else skolar.sort((a,b)=>a.namn.localeCompare(b.namn,'sv'));
+
+  skolar.forEach(s => {
+    const vals = YEARS.map(y=>s.years[y]??null);
+    const lastTwo = vals.filter(v=>v!=null).slice(-2);
+    const trend = lastTwo.length===2 ? lastTwo[1]-lastTwo[0] : 0;
+    const trendCls = trend>0.5?'up':trend<-0.5?'down':'';
+    const trendChar = trend>0.5?'↑':trend<-0.5?'↓':'–';
+    const typLabel = s.typ==='Kommunal'?'kommunal':'fristående';
+
+    const item = document.createElement('div');
+    item.className = 'school-item';
+
+    const row = document.createElement('div');
+    row.className = 'school-row';
+    row.innerHTML = `
+      <div class="s-dot" style="background:${getColor(s.val,metric)}"></div>
+      <span class="s-name" title="${s.namn}">${s.namn}</span>
+      <span class="s-badge ${typLabel}">${typLabel}</span>
+      <span class="s-trend ${trendCls}">${trendChar}</span>
+      <span class="s-val">${s.val}</span>`;
+
+    const sparkWrap = document.createElement('div');
+    sparkWrap.className = 'sparkline-wrap';
+    sparkWrap.innerHTML = `<div class="sparkline-title">${YEARS[0].slice(0,4)}–${YEARS[YEARS.length-1].slice(5)} · ${getMetric().label}</div>`;
+
+    const svg = buildSparkline(vals, metric);
+    sparkWrap.appendChild(svg);
+
+    row.addEventListener('click', () => {
+      const isOpen = sparkWrap.classList.contains('open');
+      document.querySelectorAll('.sparkline-wrap.open').forEach(el=>{el.classList.remove('open');el.previousSibling?.classList.remove('open')});
+      if (!isOpen) { sparkWrap.classList.add('open'); row.classList.add('open'); }
+    });
+
+    item.appendChild(row);
+    item.appendChild(sparkWrap);
+    list.appendChild(item);
+  });
+}
+
+function buildSparkline(vals, metric) {
+  const m = METRICS.find(x=>x.key===metric);
+  const [rMin, rMax] = m.range;
+  const w=268, h=48, pad=4;
+  const valid = vals.filter(v=>v!=null);
+  if (!valid.length) {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+    svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
+    svg.setAttribute('class','sparkline-svg');
+    return svg;
+  }
+  const dataMin = Math.min(...valid);
+  const dataMax = Math.max(...valid);
+  const yRange = dataMax-dataMin || 1;
+
+  const points = vals.map((v,i)=>{
+    const x = pad + (i/(YEARS.length-1))*(w-pad*2);
+    const y = v!=null ? h-pad - ((v-dataMin)/yRange)*(h-pad*2) : null;
+    return {x,y,v};
+  });
+
+  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
+  svg.setAttribute('class','sparkline-svg');
+
+  const pathD = points.filter(p=>p.y!=null).map((p,i)=>`${i===0?'M':'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+  path.setAttribute('d',pathD);
+  path.setAttribute('fill','none');
+  path.setAttribute('stroke','#f5c842');
+  path.setAttribute('stroke-width','1.5');
+  path.setAttribute('stroke-linecap','round');
+  path.setAttribute('stroke-linejoin','round');
+  svg.appendChild(path);
+
+  points.forEach(p=>{
+    if (p.y==null) return;
+    const circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    circle.setAttribute('cx',p.x.toFixed(1));
+    circle.setAttribute('cy',p.y.toFixed(1));
+    circle.setAttribute('r','2.5');
+    circle.setAttribute('fill',getColor(p.v,metric));
+    circle.setAttribute('stroke','#181c27');
+    circle.setAttribute('stroke-width','1');
+    svg.appendChild(circle);
+
+    const text = document.createElementNS('http://www.w3.org/2000/svg','text');
+    text.setAttribute('x',p.x.toFixed(1));
+    text.setAttribute('y',(p.y-6).toFixed(1));
+    text.setAttribute('text-anchor','middle');
+    text.setAttribute('font-size','8');
+    text.setAttribute('fill','rgba(255,255,255,0.5)');
+    text.textContent = p.v;
+    svg.appendChild(text);
+  });
+
+  return svg;
+}
+
+document.getElementById('sort-val').addEventListener('click',()=>{
+  sortBy='val';
+  document.getElementById('sort-val').classList.add('active');
+  document.getElementById('sort-name').classList.remove('active');
+  if (selectedKommun) renderSchools(selectedKommun,currentMetric,getYear());
+});
+document.getElementById('sort-name').addEventListener('click',()=>{
+  sortBy='name';
+  document.getElementById('sort-name').classList.add('active');
+  document.getElementById('sort-val').classList.remove('active');
+  if (selectedKommun) renderSchools(selectedKommun,currentMetric,getYear());
+});
+document.getElementById('back-btn').addEventListener('click',()=>{
+  selectedKommun = null;
+  document.getElementById('detail').classList.remove('visible');
+  document.getElementById('empty-state').style.display='';
+  renderLayer();
+});
 
 async function main() {
   try {
     setStatus('Laddar data...');
     const [geo, data] = await Promise.all([
-      fetch(GEOJSON_URL).then(r => r.json()),
-      fetch(DATA_URL).then(r => r.json()),
+      fetch(GEOJSON_URL).then(r=>r.json()),
+      fetch(DATA_URL).then(r=>r.json()),
     ]);
     geojson  = geo;
-    skoldata = data;
+    appData  = data;
     setProgress(100);
-    enableAllMetrics();
+    buildMetricTabs();
+    buildYearPills();
     renderLayer();
-    setStatus(`${Object.keys(skoldata).length} kommuner · ${YEARS[currentYearIdx]}`, 'done');
-    setTimeout(() => { progressEl.style.opacity = '0'; }, 1500);
-  } catch (err) {
-    setStatus('Fel: ' + err.message, 'error');
+    setStatus(`${data.meta.antalKommuner} kommuner · ${data.meta.antalSkolor} skolor`,'done');
+    setTimeout(()=>{progressEl.style.opacity='0'},1500);
+  } catch(err) {
+    setStatus('Fel: '+err.message,'error');
     console.error(err);
   }
 }
